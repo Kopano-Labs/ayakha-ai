@@ -3,7 +3,7 @@
 Updated: 2026-08-26
 Repository: `RobynAwesome/ayakha-ai`
 Branch: `main`
-State: POC-0 truth lock seeded; implementation has not started.
+State: POC-0 truth lock seeded; POC-1 is open for implementation.
 
 ## Canonical product state
 
@@ -19,6 +19,7 @@ State: POC-0 truth lock seeded; implementation has not started.
 - The repository was empty before this truth-lock seed.
 - MVP scope and acceptance criteria are now recorded in `docs/MVP_TRUTH_LOCK.md`.
 - Agent continuity rules are recorded in `.github/copilot-instructions.md`.
+- GitHub issue #1 records the POC-1 acceptance criteria: https://github.com/RobynAwesome/ayakha-ai/issues/1
 
 ## Current implementation status
 
@@ -34,7 +35,7 @@ Not started:
 
 ## Next action
 
-Implement POC-1: the local Aya input-to-design-brief loop.
+Implement POC-1: the local Aya input-to-design-brief loop (issue #1).
 
 POC-1 must provide:
 
