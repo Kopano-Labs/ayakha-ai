@@ -32,3 +32,13 @@ python ayakha_local_driver.py
 ```
 
 Never commit API keys. Keep them in environment variables.
+
+## Tests (no SolidWorks needed)
+
+```powershell
+pip install pytest
+python -m pytest tests -q
+```
+
+They use a fake SolidWorks driver, so they check the verification and ledger
+logic only. Real SolidWorks behaviour still has to be confirmed on a live run.

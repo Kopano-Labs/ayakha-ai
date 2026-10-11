@@ -85,6 +85,10 @@ except ImportError:
     win32com = None
     pythoncom = None
 
+# The exception type for SolidWorks COM failures. An empty tuple catches
+# nothing, so this stays valid on machines without pywin32.
+COM_ERROR = pythoncom.com_error if pythoncom is not None else ()
+
 try:
     import pyautogui
 except ImportError:
@@ -399,19 +403,64 @@ class SolidWorksDriver:
             raise RuntimeError("pyautogui required for click_toolbar fallback.")
         pyautogui.click(params["x"], params["y"])
 
-    def verify(self, expected: str):
-        """Read-only feature-tree check. Never used to make changes — only
-        to confirm what actually happened, matching the decision to trust
-        verification over the model's own claim of success."""
+    def feature_snapshot(self) -> list[tuple[str, str]]:
+        """Read-only: (name, type) for every feature in the tree, e.g.
+        ("Boss-Extrude1", "Extrusion"). Never changes the model."""
+        out = []
         feature = self.model.FirstFeature()
-        names = []
         while feature is not None:
-            names.append(feature.Name)
+            try:
+                type_name = feature.GetTypeName2()
+            except Exception:
+                type_name = "?"
+            out.append((feature.Name, type_name))
             feature = feature.GetNextFeature()
-        print(f"  [verify] Feature tree now: {names}")
-        print(f"  [verify] Expected: {expected}")
-        # TODO: replace with real matching logic once you decide precisely
-        # what "matches" means (e.g. regex on feature names, count checks).
+        return out
+
+
+# Feature type (as reported by SolidWorks' GetTypeName2) that each action is
+# expected to add to the tree. Only actions that create a top-level feature are
+# listed: drawing lines/rectangles inside an open sketch adds no feature.
+# UNVERIFIED: "ProfileFeature" (sketch) and "Extrusion" (boss-extrude) are the
+# documented type names; if a live run reports different names, the [verify]
+# line prints the actual types so this table can be corrected.
+EXPECTED_FEATURE_TYPES = {
+    "new_sketch": "ProfileFeature",
+    "extrude": "Extrusion",
+}
+
+
+def check_new_features(before, after, action_types):
+    """Compares feature-tree snapshots taken before and after a macro.
+
+    Returns (verified, detail):
+      True  - every feature the macro should have created actually appeared
+      False - at least one expected feature is missing
+      None  - the macro has no action whose result shows up in the tree,
+              so the tree can't confirm or deny it (e.g. only drew a line)
+    """
+    before_names = {name for name, _ in before}
+    new = [(name, t) for name, t in after if name not in before_names]
+
+    expected = [EXPECTED_FEATURE_TYPES[a] for a in action_types if a in EXPECTED_FEATURE_TYPES]
+    if "extrude" in action_types:
+        # An extrude absorbs its sketch in the tree, so only require the extrude.
+        expected = [t for t in expected if t != "ProfileFeature"]
+
+    new_desc = ", ".join(f"{n} ({t})" for n, t in new) or "none"
+    if not expected:
+        return None, f"nothing checkable in the feature tree; new features: {new_desc}"
+
+    pool = [t for _, t in new]
+    missing = []
+    for t in expected:
+        if t in pool:
+            pool.remove(t)
+        else:
+            missing.append(t)
+    if missing:
+        return False, f"FAILED: expected {expected}, missing {missing}; new features: {new_desc}"
+    return True, f"confirmed: {new_desc}"
 
 
 def execute_generic_action(action_type: GenericActionType, params: dict):
@@ -448,6 +497,44 @@ def execute_macro(macro: MacroAction, sw_driver, canva_driver, tts_engine, ledge
             print("Cancelled by student.")
             return
 
+    # Snapshot the feature tree first, so success is judged by what actually
+    # appears in SolidWorks, not by whether the API calls happened to not throw.
+    before = _safe_snapshot(sw_driver) if macro.tool == Tool.SOLIDWORKS else None
+
+    try:
+        _run_actions(macro, sw_driver, canva_driver)
+    except Exception:
+        ledger.record_macro_actions(macro, verified=False)
+        raise
+
+    verified_ok = None
+    if macro.tool == Tool.SOLIDWORKS:
+        after = _safe_snapshot(sw_driver)
+        if before is None or after is None:
+            print("  [verify] Skipped: could not read the SolidWorks feature tree.")
+        else:
+            verified_ok, detail = check_new_features(
+                before, after, [a.type.value for a in macro.actions])
+            print(f"  [verify] {detail}")
+            if macro.verification.expected:
+                print(f"  [verify] Aya expected: {macro.verification.expected}")
+    else:
+        print("  [verify] Not verified: no automatic check exists for this tool yet.")
+
+    ledger.record_macro_actions(macro, verified=verified_ok)
+
+
+def _safe_snapshot(sw_driver):
+    if sw_driver is None:
+        return None
+    try:
+        return sw_driver.feature_snapshot()
+    except Exception as e:
+        print(f"  [verify] Could not read feature tree: {e}")
+        return None
+
+
+def _run_actions(macro: MacroAction, sw_driver, canva_driver):
     for action in macro.actions:
         if macro.tool == Tool.SOLIDWORKS:
             if sw_driver is None:
@@ -464,7 +551,7 @@ def execute_macro(macro: MacroAction, sw_driver, canva_driver, tts_engine, ledge
                     f"received params: {action.params}. The cloud brain likely used the "
                     f"wrong key name for this action."
                 )
-            except pythoncom.com_error as e:
+            except COM_ERROR as e:
                 arg_num = e.args[3] if len(e.args) > 3 else "unknown"
                 raise RuntimeError(
                     f"SolidWorks COM error on action '{action.type.value}' "
@@ -515,18 +602,6 @@ def execute_macro(macro: MacroAction, sw_driver, canva_driver, tts_engine, ledge
                     f"Action '{action.type.value}' is missing required parameter {e} — "
                     f"received params: {action.params}."
                 )
-
-    verified_ok = None
-    if macro.verification.method == VerificationMethod.COM_READONLY:
-        if sw_driver is None:
-            print("  [verify] Skipped — no SolidWorks driver available.")
-        else:
-            sw_driver.verify(macro.verification.expected or "")
-            verified_ok = True  # sw_driver.verify() currently prints for a human to check; treat "ran without error" as a pass for now
-    elif macro.verification.method == VerificationMethod.SCREENSHOT_DIFF:
-        print("  [verify] Screenshot-diff verification not implemented yet.")
-
-    ledger.record_macro_actions(macro, verified=verified_ok)
 
 
 def main():

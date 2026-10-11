@@ -4,3 +4,4 @@ __pycache__/
 *.env
 backup_*/
 ui_dump.txt
+.pytest_cache/
