@@ -1,9 +1,17 @@
 # Ayakha Current State
 
-Updated: 2026-08-26
-Repository: `RobynAwesome/ayakha-ai`
+Updated: 2026-10-11
+Repository: `Kopano-Labs/ayakha-ai`
 Branch: `main`
-State: POC-0 truth lock seeded; POC-1 is open for implementation.
+State: POC-0 truth lock seeded; POC-1 is open for implementation. A separate exploratory prototype exists (see below).
+
+## Exploratory prototype (added 2026-10-11)
+
+H built a voice to SolidWorks prototype on his machine (Sept–Oct 2026), now in
+`prototype/` on branch `prototype/voice-solidworks-pipeline`. It uses a cloud brain
+(Groq), which conflicts with the truth lock's local-inference rule. The truth lock
+has **not** been changed; Robyn and H need to decide. Full evidence, defects and
+next actions: `docs/receipts/2026-10-11-voice-solidworks-prototype.md`.
 
 ## Canonical product state
 

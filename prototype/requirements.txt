@@ -1,0 +1,9 @@
+pydantic>=2
+requests
+pywin32; sys_platform == "win32"
+pyautogui
+SpeechRecognition
+pyttsx3
+pyaudio
+playwright
+pywinauto; sys_platform == "win32"
