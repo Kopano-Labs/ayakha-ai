@@ -62,6 +62,27 @@ No SolidWorks, browser, microphone, provider inference or student session was ru
 Cloud CI results must be checked on the pushed commit; local success is not a
 claim that GitHub Actions has passed.
 
+## Push and cloud CI observation
+
+The local safety change was committed and pushed without a history rewrite:
+`5218b949d5717fe4a9d561c3f9c51c52e160b73b`. GitHub PR #4's head matched that
+commit; its base stayed `prototype/voice-solidworks-pipeline`. The working tree
+was clean and synchronized. PR #4's title/description now reflect the safety
+scope. `main` and PR #3's branch were not changed.
+
+GitHub created both workflow events at that source commit:
+
+- [Push run 38243910978](https://github.com/Kopano-Labs/ayakha-ai/actions/runs/38243910978)
+- [Pull-request run 38243911850](https://github.com/Kopano-Labs/ayakha-ai/actions/runs/38243911850)
+
+The runs failed before execution. Job annotations reported:
+“The job was not started because your account is locked due to a billing issue.”
+The matrix sibling was also canceled on the PR event. This is a GitHub account
+billing blocker, not a test failure observed on a runner. No hosted test passed.
+The account owner must resolve billing, then rerun CI at the current PR head;
+repository billing/settings were not modified. This receipt update is a separate
+documentation commit after the tested source commit.
+
 The API reported Actions enabled. The classic `main` protection endpoint returned
 `404 Branch not protected`; active branch rules and repository rulesets returned
 empty arrays. This is the observed enforcement state, not a request to change
