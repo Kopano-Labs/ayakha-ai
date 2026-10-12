@@ -5,3 +5,4 @@ __pycache__/
 backup_*/
 ui_dump.txt
 .pytest_cache/
+.venv/

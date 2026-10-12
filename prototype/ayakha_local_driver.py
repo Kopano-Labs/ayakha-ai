@@ -1,56 +1,11 @@
-"""
-Ayakha Local Driver
-====================
+"""Ayakha exploratory connected prototype.
 
-Runs on the student's Windows machine. This is the piece that turns Aya's
-cloud reasoning into real actions in SolidWorks — the first working
-end-to-end pipeline: text request -> cloud brain -> MacroAction -> real
-SolidWorks automation -> verification.
-
-CURRENT SCOPE (first working pipeline)
----------------------------------------
-  1. Take a spoken request from the student (STT) — or typed text if voice
-     mode is off or unavailable.
-  2. Call the cloud brain (Groq) to get back a validated MacroAction.
-  3. Speak Aya's narration aloud (TTS) while also printing it as a live
-     caption — matches the "student sees and hears" interface decision.
-  4. If the macro requires confirmation, ask the student before proceeding
-     (matches Ayakha's approval-gate teaching design). Confirmation stays
-     keyboard-based on purpose — safer than voice for a live demo, where a
-     misheard "yes" could trigger an unwanted action.
-  5. Execute the macro against SolidWorks via COM automation — true UI-level
-     drawing operations; COM is used read-only for verification only, never
-     to make the change itself.
-  6. Verify the result and report back.
-
-NOT YET IMPLEMENTED (clear stubs, not silent gaps)
-----------------------------------------------------
-  - Canva automation exists (ayakha_canva_driver.py) but is UNVERIFIED —
-    written without live access to canva.com, so selectors are best-effort.
-    Expect at least one real debugging round, same as the early SolidWorks fixes.
-  - add_dimension / fillet (need entity-specific COM selection logic per case)
-  - Persistent WebSocket connection to a hosted cloud brain — currently calls
-    Groq directly per request. Fine for local dev; swappable later without
-    touching the execution logic below.
-  - Real verification matching logic (currently prints the feature tree and
-    the expected outcome side by side for a human to eyeball, rather than
-    programmatically confirming a match; Canva has no verification yet)
-  - A proper visual overlay UI — captions currently print to the console
-
-SETUP (Windows only — needs SolidWorks installed, closed or open, either is fine)
--------------------------------------------------------------
-  pip install pywin32 pyautogui requests pydantic SpeechRecognition pyttsx3 pyaudio playwright
-  playwright install chromium
-  (If pyaudio fails to install on Windows: pip install pipwin && pipwin install pyaudio)
-  Set GROQ_API_KEY as an environment variable ($env:GROQ_API_KEY="..." in PowerShell)
-  Put macro_action_schema.py and ayakha_canva_driver.py in the same folder as this file.
-  Aya opens SolidWorks and creates a new part document herself — no manual setup needed.
-  First Canva request opens a browser and asks you to log in once; session persists after that.
-
-RUN
----
-  python ayakha_local_driver.py
-  (You'll be asked once at startup whether to use voice or typed input.)
+Groq plans; the local policy validates and requests keyboard approval for every
+macro. Only bounded SolidWorks sketch/extrude primitives are executable, via
+COM mutations in an unsaved disposable part. Feature-tree reads establish
+presence only; correct geometry remains unverified. Canva and global desktop
+control are disabled. Ctrl+C aborts; partial geometry must be discarded manually.
+See prototype/README.md for setup, connected data flows and recovery.
 """
 
 import os
@@ -63,19 +18,14 @@ from macro_action_schema import (
     MacroAction,
     Tool,
     GenericActionType,
-    VerificationMethod,
     TeachingMode,
 )
 from ayakha_ledger import Ledger
-
-try:
-    from ayakha_canva_driver import CanvaDriver
-except ImportError:
-    CanvaDriver = None
+from execution_policy import validate_execution
 
 TAKEOVER_PHRASES = ("just do it", "do it for me", "build it for me", "you do it", "just build it")
 
-# pywin32 / pyautogui are Windows-only. Guarded so this file can still be
+# pywin32 is Windows-only. Guarded so this file can still be
 # read, imported, and syntax-checked on any platform — only fails at the
 # point of actually trying to drive SolidWorks or the screen.
 try:
@@ -90,11 +40,6 @@ except ImportError:
 COM_ERROR = pythoncom.com_error if pythoncom is not None else ()
 
 try:
-    import pyautogui
-except ImportError:
-    pyautogui = None
-
-try:
     import speech_recognition as sr
 except ImportError:
     sr = None
@@ -107,13 +52,13 @@ except ImportError:
 
 GROQ_MODEL = "openai/gpt-oss-120b"
 
-SYSTEM_PROMPT = """You are Ayakha's reasoning brain, controlling SolidWorks or Canva through UI automation on behalf of a student.
+SYSTEM_PROMPT = """You are Ayakha's prototype planner, proposing SolidWorks COM actions for student approval.
 
 Given a student's request, respond with ONLY a JSON object matching this exact structure (no markdown fences, no explanation, just the raw JSON):
 
 {
   "macro_id": "macro_XXXX",
-  "tool": "solidworks" | "canva" | "generic",
+  "tool": "solidworks",
   "goal": "plain language description of what this macro accomplishes",
   "actions": [
     {"type": "<action_type>", "params": {...}}
@@ -142,9 +87,6 @@ SolidWorks action types and their exact required params:
 - draw_rectangle: {"x": number, "y": number, "width": number, "height": number}
 - draw_circle: {"x": number, "y": number, "radius": number}
 - extrude: {"depth": number}
-- select_feature: {"name": string}
-- save_file: {}
-- click_toolbar: {"x": number, "y": number}
 - add_dimension: not yet supported — avoid this type, describe the dimension in narration instead
 - fillet: not yet supported — avoid this type, skip fillets for now
 
@@ -159,31 +101,15 @@ you emit — e.g.: sketch+extrude the head 10mm deep at offset_mm 0, then
 sketch the shaft at offset_mm 10 (not 0) before extruding it — so the
 shaft starts exactly where the head ends rather than fusing into it.
 
-Canva action types and their exact required params:
-- click_element: {"description": string}
-- add_text: {"text": string, "x": number, "y": number}
-- add_shape: {"shape": string, "x": number, "y": number, "width": number, "height": number}
-- add_image: {"source": string} — searches Canva's own stock image library for this term and inserts the first result. This does NOT fetch an arbitrary external URL or upload a file.
-- drag_resize: {"description": string, "width": number, "height": number}
-- change_color: {"description": string, "color": string}
-- select_template: {"name": string}
-
-Generic action types and their exact required params (use only when no
-tool-specific action fits):
-- click_at: {"x": number, "y": number}
-- move_mouse: {"x": number, "y": number}
-- type_text: {"text": string}
-- key_press: {"key": string}
-- wait: {"milliseconds": number}
-- screenshot: {}
-
+Canva, generic desktop controls, saving and feature selection are disabled.
 If a request is a real, complex mechanical part (e.g. a bolt with a
 hexagonal head and threads), approximate it with the primitives above —
 e.g. a hex head as six draw_line calls, threads represented as a single
 cylinder rather than true helical geometry. Do not skip the request; do
 the closest reasonable approximation with only the actions listed above.
 
-All dimensions in params are in millimeters.
+All dimensions in params are in millimeters, finite and within 1000 mm.
+Every macro requires confirmation. Do not include unsupported actions.
 """
 
 
@@ -228,17 +154,12 @@ def listen_for_request(recognizer, microphone) -> str | None:
 
 
 def confirm(prompt: str) -> bool:
-    """Asks y/n, but forgiving of stray characters getting mixed into the
-    input (which is what was silently cancelling actions before) — looks
-    for a clear yes/no rather than demanding an exact 'y' match, and
-    re-asks instead of assuming 'no' when the answer is ambiguous."""
-    while True:
+    """Only exact positive tokens authorize; ambiguity and interruption cancel."""
+    try:
         answer = input(prompt).strip().lower()
-        if answer in ("y", "yes") or answer.endswith("y") or answer.endswith("yes"):
-            return True
-        if answer in ("n", "no") or answer.endswith("n") or answer.endswith("no"):
-            return False
-        print("Didn't catch a clear yes or no — please type y or n:")
+    except (EOFError, KeyboardInterrupt):
+        return False
+    return answer in ("y", "yes")
 
 
 def get_macro_action(student_request: str) -> MacroAction:
@@ -269,7 +190,7 @@ def get_macro_action(student_request: str) -> MacroAction:
         if raw.startswith("json"):
             raw = raw[4:]
     data = json.loads(raw.strip())
-    return MacroAction.model_validate(data)
+    return validate_execution(MacroAction.model_validate(data))
 
 
 def _null_callout():
@@ -293,25 +214,45 @@ class SolidWorksDriver:
             raise RuntimeError("pywin32 is required on Windows to drive SolidWorks.")
         self.app = win32com.client.Dispatch("SldWorks.Application")
         self.app.Visible = True
+        self._owned_document = None
+        self._failed = False
         self._ensure_active_document()
         self._offset_planes = {}  # (base_plane, offset_mm) -> created plane feature name, so repeated requests for the same offset reuse one plane instead of creating duplicates
 
     def _ensure_active_document(self):
-        """Creates a new part document automatically if none is open.
-        True UI automation shouldn't require the student to set up
-        SolidWorks manually first — Aya opens her own blank canvas."""
-        if self.app.ActiveDoc is None:
-            SW_DEFAULT_TEMPLATE_PART = 8  # swDefaultTemplatePart enum value
-            template = self.app.GetUserPreferenceStringValue(SW_DEFAULT_TEMPLATE_PART)
-            self.app.NewDocument(template, 0, 0, 0)
+        """Create one unsaved part; refuse to adopt any existing document."""
+        if self._owned_document is not None:
+            return
+        if self.app.ActiveDoc is not None:
+            raise RuntimeError("Close existing SolidWorks documents before starting the disposable demo.")
+        SW_DEFAULT_TEMPLATE_PART = 8
+        template = self.app.GetUserPreferenceStringValue(SW_DEFAULT_TEMPLATE_PART)
+        if not template:
+            raise RuntimeError("No default SolidWorks part template is configured.")
+        self._owned_document = self.app.NewDocument(template, 0, 0, 0)
+        if self._owned_document is None:
+            raise RuntimeError("Could not create a disposable SolidWorks part.")
+        self.assert_execution_target()
+
+    def assert_execution_target(self):
+        """Check ownership before every action; uncertain identity fails closed."""
+        if self._failed:
+            raise RuntimeError("Demo interrupted or failed. Discard the unsaved part and restart.")
+        doc = self._owned_document
+        active = self.app.ActiveDoc
+        # swObjectSame=1; swObjectUnsupported=2 must not be treated as truthy.
+        if doc is None or active is None or self.app.IsSame(doc, active) != 1:
+            raise RuntimeError("The disposable part is no longer active. Restart the demo.")
+        if doc.GetPathName() or doc.GetType() != 1:
+            raise RuntimeError("Execution requires Aya's unsaved disposable part.")
+
+    def invalidate(self):
+        self._failed = True
 
     @property
     def model(self):
-        self._ensure_active_document()  # re-creates one if it got closed mid-session
-        doc = self.app.ActiveDoc
-        if doc is None:
-            raise RuntimeError("Could not create or access a SolidWorks part document.")
-        return doc
+        self.assert_execution_target()
+        return self._owned_document
 
     def new_sketch(self, params: dict):
         plane = params.get("plane", "Front")
@@ -395,13 +336,10 @@ class SolidWorksDriver:
         self.model.Extension.SelectByID2(params["name"], "BODYFEATURE", 0, 0, 0, False, 0, _null_callout(), 0)
 
     def save_file(self, params: dict):
-        self.model.Save()
+        raise RuntimeError("Automatic saving is disabled for disposable demo parts.")
 
     def click_toolbar(self, params: dict):
-        """Fallback for ops not modeled via COM — true UI automation via pyautogui."""
-        if pyautogui is None:
-            raise RuntimeError("pyautogui required for click_toolbar fallback.")
-        pyautogui.click(params["x"], params["y"])
+        raise RuntimeError("Raw desktop clicks are disabled by local policy.")
 
     def feature_snapshot(self) -> list[tuple[str, str]]:
         """Read-only: (name, type) for every feature in the tree, e.g.
@@ -464,38 +402,31 @@ def check_new_features(before, after, action_types):
 
 
 def execute_generic_action(action_type: GenericActionType, params: dict):
-    if pyautogui is None:
-        raise RuntimeError("pyautogui is required for generic UI actions.")
-    if action_type == GenericActionType.CLICK_AT:
-        pyautogui.click(params["x"], params["y"])
-    elif action_type == GenericActionType.MOVE_MOUSE:
-        pyautogui.moveTo(params["x"], params["y"])
-    elif action_type == GenericActionType.TYPE_TEXT:
-        pyautogui.typewrite(params["text"])
-    elif action_type == GenericActionType.KEY_PRESS:
-        pyautogui.press(params["key"])
-    elif action_type == GenericActionType.WAIT:
-        ms = params.get("milliseconds", params.get("ms", 500))
-        time.sleep(ms / 1000)
-    elif action_type == GenericActionType.SCREENSHOT:
-        return pyautogui.screenshot()
+    raise RuntimeError("Generic desktop control is disabled by local policy.")
 
 
 STEP_DELAY_SECONDS = 0.8  # pause between actions so the student can actually watch, not just see a teleported result
 
 
 def execute_macro(macro: MacroAction, sw_driver, canva_driver, tts_engine, ledger: Ledger):
+    macro = validate_execution(macro)
     print(f"\nGoal: {macro.goal}")
+    for action in macro.actions:
+        print(f"  Proposed: {action.type.value}({action.params})")
 
     if macro.teaching.narration:
         speak(macro.teaching.narration, tts_engine)
     if macro.teaching.mode == TeachingMode.DEMONSTRATION and macro.teaching.correcting:
         speak(f"Allow me to demonstrate. {macro.teaching.correcting}", tts_engine)
 
-    if macro.requires_confirmation:
-        if not confirm("Proceed with this action? [y/n]: "):
-            print("Cancelled by student.")
-            return
+    if not confirm("Approve this whole macro in an unsaved disposable part? [y/n]: "):
+        print("Cancelled by student.")
+        return sw_driver
+
+    # Connecting and creating a document are also deferred until approval.
+    if sw_driver is None:
+        sw_driver = SolidWorksDriver()
+    sw_driver.assert_execution_target()
 
     # Snapshot the feature tree first, so success is judged by what actually
     # appears in SolidWorks, not by whether the API calls happened to not throw.
@@ -503,25 +434,31 @@ def execute_macro(macro: MacroAction, sw_driver, canva_driver, tts_engine, ledge
 
     try:
         _run_actions(macro, sw_driver, canva_driver)
-    except Exception:
+        verified_ok = _verify_macro_result(macro, sw_driver, before)
+    except (Exception, KeyboardInterrupt):
+        sw_driver.invalidate()
         ledger.record_macro_actions(macro, verified=False)
         raise
 
-    verified_ok = None
-    if macro.tool == Tool.SOLIDWORKS:
-        after = _safe_snapshot(sw_driver)
-        if before is None or after is None:
-            print("  [verify] Skipped: could not read the SolidWorks feature tree.")
-        else:
-            verified_ok, detail = check_new_features(
-                before, after, [a.type.value for a in macro.actions])
-            print(f"  [verify] {detail}")
-            if macro.verification.expected:
-                print(f"  [verify] Aya expected: {macro.verification.expected}")
-    else:
-        print("  [verify] Not verified: no automatic check exists for this tool yet.")
-
     ledger.record_macro_actions(macro, verified=verified_ok)
+    if verified_ok is False:
+        sw_driver.invalidate()
+    return sw_driver
+
+
+def _verify_macro_result(macro, sw_driver, before):
+    after = _safe_snapshot(sw_driver)
+    if before is None or after is None:
+        print("  [verify] Skipped: could not read the SolidWorks feature tree.")
+        return None
+    present, detail = check_new_features(before, after, [a.type.value for a in macro.actions])
+    print(f"  [verify] {detail}")
+    if macro.verification.expected:
+        print(f"  [verify] Aya expected: {macro.verification.expected}")
+    if present is True:
+        print("  [verify] Feature presence only; dimensions and positioning are unverified.")
+        return None
+    return present
 
 
 def _safe_snapshot(sw_driver):
@@ -535,10 +472,12 @@ def _safe_snapshot(sw_driver):
 
 
 def _run_actions(macro: MacroAction, sw_driver, canva_driver):
+    macro = validate_execution(macro)
     for action in macro.actions:
         if macro.tool == Tool.SOLIDWORKS:
             if sw_driver is None:
                 raise RuntimeError("SolidWorks driver not initialized — check SolidWorks is installed correctly.")
+            sw_driver.assert_execution_target()
             handler = getattr(sw_driver, action.type.value, None)
             if handler is None:
                 raise NotImplementedError(f"No handler for SolidWorks action '{action.type.value}'")
@@ -568,64 +507,16 @@ def _run_actions(macro: MacroAction, sw_driver, canva_driver):
             except Exception:
                 pass  # redraw/zoom failures shouldn't abort the actual build
             time.sleep(STEP_DELAY_SECONDS)
-        elif macro.tool == Tool.CANVA:
-            if canva_driver is None:
-                raise RuntimeError(
-                    "Canva driver not initialized — check playwright is installed "
-                    "(pip install playwright && playwright install chromium)."
-                )
-            handler = getattr(canva_driver, action.type.value, None)
-            if handler is None:
-                raise NotImplementedError(f"No handler for Canva action '{action.type.value}'")
-            print(f"  → {action.type.value}({action.params})")
-            try:
-                handler(action.params)
-            except KeyError as e:
-                raise RuntimeError(
-                    f"Action '{action.type.value}' is missing required parameter {e} — "
-                    f"received params: {action.params}. The cloud brain likely used the "
-                    f"wrong key name for this action."
-                )
-            except Exception as e:
-                raise RuntimeError(
-                    f"Canva automation error on action '{action.type.value}' "
-                    f"(params: {action.params}): {e}. This driver is unverified against "
-                    f"a live Canva session — likely a selector that doesn't match "
-                    f"Canva's current UI. Report this exact error to get it fixed."
-                )
-            time.sleep(STEP_DELAY_SECONDS)  # pacing so the student can watch, same as SolidWorks
-        elif macro.tool == Tool.GENERIC:
-            try:
-                execute_generic_action(action.type, action.params)
-            except KeyError as e:
-                raise RuntimeError(
-                    f"Action '{action.type.value}' is missing required parameter {e} — "
-                    f"received params: {action.params}."
-                )
 
 
 def main():
     print("Ayakha local driver — say or type a request. Type 'quit' anytime to exit.\n")
 
-    sw_driver = None
-    if win32com is not None:
-        try:
-            sw_driver = SolidWorksDriver()
-            print("Connected to SolidWorks.")
-        except Exception as e:
-            print(f"Could not connect to SolidWorks ({e}). SolidWorks actions will fail.")
-    else:
-        print("pywin32 not available — SolidWorks actions will fail. Generic actions still work.")
-
-    canva_driver = None
-    if CanvaDriver is not None:
-        try:
-            canva_driver = CanvaDriver()
-            print("Canva browser session ready.")
-        except Exception as e:
-            print(f"Could not start Canva automation ({e}). Canva actions will fail.")
-    else:
-        print("playwright not available — Canva actions will fail. Run: pip install playwright && playwright install chromium")
+    print("Connected prototype: typed requests are sent to Groq; voice audio is sent to Google.")
+    if not confirm("Consent to these connected data flows for this session? [y/n]: "):
+        return
+    sw_driver = None  # created only after an approved macro
+    canva_driver = None  # preserved source; execution disabled
 
     tts_engine = pyttsx3.init() if pyttsx3 is not None else None
     if tts_engine is None:
@@ -679,7 +570,10 @@ def main():
             speak(ledger.request_full_takeover(), tts_engine)
 
         try:
-            execute_macro(macro, sw_driver, canva_driver, tts_engine, ledger)
+            sw_driver = execute_macro(macro, sw_driver, canva_driver, tts_engine, ledger)
+        except KeyboardInterrupt:
+            print("Interrupted. Discard the unsaved demo part before restarting.")
+            break
         except Exception as e:
             print(f"Execution error: {e}")
         finally:

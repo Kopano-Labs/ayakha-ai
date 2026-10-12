@@ -11,10 +11,9 @@ Design principles this schema encodes:
    individual mouse/keyboard events are needed. This is what keeps Aya
    responsive over slow/unreliable connections instead of round-tripping
    to the cloud for every click.
-2. TRUE UI AUTOMATION — every action is expressed as something a human
-   could physically do (click, type, drag). Tool APIs (like SolidWorks
-   COM) are only ever used for read-only verification, never to make
-   the actual change. This matches the 2 Sept decision with Robyn.
+2. COM ACTUATION — the current SolidWorks driver mutates via COM.
+   Feature-tree verification uses read-only COM calls. True-click actuation
+   remains an unresolved product decision.
 3. TEACHING IS FIRST-CLASS — narration and demonstration mode aren't
    bolted on after the fact. A macro can be executed silently, narrated
    step-by-step, or flagged as a "let me demonstrate" moment where Aya
@@ -31,7 +30,7 @@ It does not execute anything — that's the local driver's job.
 from __future__ import annotations
 from enum import Enum
 from typing import Optional, Union, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -156,16 +155,23 @@ class MacroAction(BaseModel):
     # Plain-language description of the overall goal, e.g.
     # "Draw a 100x50mm rectangle on the front plane and extrude 10mm."
     goal: str
-    actions: list[AtomicAction]
+    actions: list[AtomicAction] = Field(min_length=1, max_length=50)
     teaching: Teaching = Field(default_factory=Teaching)
     verification: Verification = Field(default_factory=Verification)
     # Approval gate — matches the "every AI action requires confirmation"
-    # decision. False only for trivial/reversible actions (e.g. a click
-    # to select something, not a change).
-    requires_confirmation: bool = True
-    # Whether the student can interrupt mid-macro to ask a question
-    # (matches the existing SPACE-to-pause feature in ayakha_brain.py).
+    # decision. The model cannot disable local approval.
+    requires_confirmation: Literal[True] = True
+    # Planner metadata only; no pause/resume control is implemented.
+    # Ctrl+C aborts execution regardless of this value.
     interruptible: bool = True
+
+    @model_validator(mode="after")
+    def match_action_tool(self):
+        action_class = {Tool.SOLIDWORKS: SolidWorksAction,
+                        Tool.CANVA: CanvaAction, Tool.GENERIC: GenericAction}[self.tool]
+        if any(not isinstance(action, action_class) for action in self.actions):
+            raise ValueError("Every action must match the macro's target tool")
+        return self
 
 
 # ---------------------------------------------------------------------------
@@ -185,7 +191,7 @@ if __name__ == "__main__":
             ),
             SolidWorksAction(
                 type=SolidWorksActionType.EXTRUDE,
-                params={"depth": 10, "direction": "blind"},
+                params={"depth": 10},
             ),
         ],
         teaching=Teaching(

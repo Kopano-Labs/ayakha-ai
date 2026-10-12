@@ -34,6 +34,12 @@ class FakeSolidWorks:
     def GraphicsRedraw2(self):
         pass
 
+    def assert_execution_target(self):
+        pass
+
+    def invalidate(self):
+        self.invalidated = True
+
     def ViewZoomtofit2(self):
         pass
 
@@ -68,13 +74,14 @@ def plate_macro(mode=TeachingMode.NARRATED):
             SolidWorksAction(type=SolidWorksActionType.EXTRUDE, params={"depth": 10}),
         ],
         teaching=Teaching(mode=mode, narration=None),
-        requires_confirmation=False,
+        requires_confirmation=True,
     )
 
 
 @pytest.fixture
 def ledger(tmp_path, monkeypatch):
     monkeypatch.setattr("ayakha_local_driver.STEP_DELAY_SECONDS", 0)
+    monkeypatch.setattr("builtins.input", lambda prompt: "yes")
     led = Ledger(student_id="test", db_path=tmp_path / "ledger.db")
     led.start_session("solidworks", "make a plate")
     return led
@@ -122,9 +129,11 @@ def test_drawing_inside_a_sketch_is_not_checkable():
 
 # ---- execute_macro + ledger: end to end with the fake driver ---------------------------
 
-def test_successful_build_is_recorded_as_confirmed(ledger):
+def test_feature_presence_does_not_verify_geometry(ledger):
     execute_macro(plate_macro(), FakeSolidWorks(), None, None, ledger)
-    assert verified_values(ledger) and all(v == 1 for v in verified_values(ledger))
+    assert verified_values(ledger) and all(v is None for v in verified_values(ledger))
+    assert ledger.skill_status() == []
+    assert "unverified" in ledger.session_summary_spoken()
 
 
 def test_build_that_silently_produces_nothing_is_recorded_as_failed(ledger):
@@ -151,4 +160,5 @@ def test_report_counts_failed_steps_separately(ledger, tmp_path):
     execute_macro(plate_macro(), FakeSolidWorks(extrude_works=False), None, None, ledger)
     report = ledger.export_markdown(tmp_path / "report.md").read_text(encoding="utf-8")
     assert "failed (excluded from the table above): 3" in report
-    assert "Steps confirmed in the tool: 3" in report
+    assert "Steps confirmed in the tool: 0" in report
+    assert "not checkable: 3" in report

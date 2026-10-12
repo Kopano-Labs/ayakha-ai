@@ -90,7 +90,7 @@ class Ledger:
     LEARNED_THRESHOLD = 2  # unaided repetitions AFTER the last demonstration
 
     def __init__(self, student_id: str, db_path: Path = LEDGER_DB):
-        LEDGER_DIR.mkdir(exist_ok=True)
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         self.student_id = student_id
         self.session_id: Optional[str] = None
         self.tool: Optional[str] = None
@@ -190,10 +190,10 @@ class Ledger:
 
     # --- reading -------------------------------------------------------------
     def skill_status(self, tool: Optional[str] = None) -> list[SkillStatus]:
-        # verified=0 means the step was checked and did NOT happen in the tool,
-        # so it can't count as practice or as a demonstration the student saw.
+        # Only independently verified results count. Unknown and failed results
+        # stay in the event log but cannot establish practice or learning.
         q = ("SELECT skill, attribution, ts FROM events "
-             "WHERE student_id=? AND (verified IS NULL OR verified=1)")
+             "WHERE student_id=? AND verified=1")
         args = [self.student_id]
         if tool:
             q += " AND tool=?"
@@ -233,12 +233,15 @@ class Ledger:
             "SELECT skill, attribution, verified FROM events WHERE session_id=?",
             (self.session_id,)).fetchall()
         failed = sorted({s for s, _, v in all_rows if v == 0})
-        rows = [(s, a) for s, a, v in all_rows if v != 0]
+        rows = [(s, a) for s, a, v in all_rows if v == 1]
+        unchecked = sorted({s for s, _, v in all_rows if v is None})
         pretty = lambda xs: ", ".join(x.replace("_", " ") for x in xs)
         if not rows:
             if failed:
                 return (f"That didn't work: {pretty(failed)} didn't come out in SolidWorks, "
                         "so none of it counts yet. Let's try again.")
+            if unchecked:
+                return "Actions were attempted, but their results are unverified and do not count toward progress."
             return "We didn't build anything this session."
         demo = sorted({s for s, a in rows if a == Attribution.AYA_DEMONSTRATED.value})
         guided = sorted({s for s, a in rows if a == Attribution.STUDENT_GUIDED.value})
@@ -246,6 +249,8 @@ class Ledger:
         done_for = sorted({s for s, a in rows if a == Attribution.AYA_DID_FOR_STUDENT.value})
 
         parts = []
+        if unchecked:
+            parts.append("some results remain unverified and do not count toward progress")
         if unaided:
             parts.append(f"You did {pretty(unaided)} on your own")
         if guided:
@@ -264,6 +269,7 @@ class Ledger:
         statuses = self.skill_status()
         lines = [f"# Ayakha progress — {self.student_id}",
                  f"_Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}_", "",
+                 "Only verified results count toward progress; feature presence alone is unverified.", "",
                  "| Skill | Status | Unaided | Guided | Aya demonstrated | Done for student |",
                  "|---|---|---|---|---|---|"]
         for s in statuses:
