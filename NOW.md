@@ -1,11 +1,30 @@
 # Ayakha Current State
 
-Updated: 2026-10-11
+Updated: 2026-10-12
 Repository: `Kopano-Labs/ayakha-ai`
-Branch: `main`
+Working branch: `fix/ledger-verification` (PR #4, stacked on PR #3)
 State: POC-0 truth lock seeded; POC-1 is open for implementation. A separate exploratory prototype exists (see below).
 
 ## Exploratory prototype (added 2026-10-11)
+
+Local development now uses `C:\Users\rkhol\ayakha-ai`, tracking the Kopano-Labs
+GitHub repository. At the 2026-10-12 audit, `main` was `a20e6d5`, PR #3 was
+`b9d8b5a`, and PR #4 was `ddd2b75`: both PRs were zero commits behind their
+respective bases, so no rebase was needed. The safety patch is developed and
+tested locally before pushing to the existing PR #4 branch. Receipt:
+`docs/receipts/2026-10-12-local-safety-review.md`.
+
+Safety source commit `5218b949d5717fe4a9d561c3f9c51c52e160b73b` was pushed to
+PR #4 with 57 offline tests passing. GitHub created push/PR CI runs but did not
+start the jobs: annotations report an account lock due to a billing issue.
+Cloud CI remains blocked until the account owner resolves billing and reruns it.
+
+The patch enforces local approval, bounds execution to reviewed SolidWorks
+primitives in an owned unsaved part, disables unreviewed dispatch and saving,
+and adds offline Windows/Linux CI. Feature presence remains unverified geometry
+and cannot count toward learning progress. Live COM/geometry proof and the
+truth-lock scope decision remain pending. PR #3's requested-changes review must
+be re-evaluated after integration; neither PR is automatically approved.
 
 H built a voice to SolidWorks prototype on his machine (Sept–Oct 2026), now in
 `prototype/` on branch `prototype/voice-solidworks-pipeline`. It uses a cloud brain

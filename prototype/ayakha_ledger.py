@@ -90,7 +90,7 @@ class Ledger:
     LEARNED_THRESHOLD = 2  # unaided repetitions AFTER the last demonstration
 
     def __init__(self, student_id: str, db_path: Path = LEDGER_DB):
-        LEDGER_DIR.mkdir(exist_ok=True)
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         self.student_id = student_id
         self.session_id: Optional[str] = None
         self.tool: Optional[str] = None
@@ -190,7 +190,10 @@ class Ledger:
 
     # --- reading -------------------------------------------------------------
     def skill_status(self, tool: Optional[str] = None) -> list[SkillStatus]:
-        q = "SELECT skill, attribution, ts FROM events WHERE student_id=?"
+        # Only independently verified results count. Unknown and failed results
+        # stay in the event log but cannot establish practice or learning.
+        q = ("SELECT skill, attribution, ts FROM events "
+             "WHERE student_id=? AND verified=1")
         args = [self.student_id]
         if tool:
             q += " AND tool=?"
@@ -226,18 +229,28 @@ class Ledger:
 
     def session_summary_spoken(self) -> str:
         """What Aya says at the end of a session. One short paragraph, no lists."""
-        rows = self.db.execute(
-            "SELECT skill, attribution FROM events WHERE session_id=?",
+        all_rows = self.db.execute(
+            "SELECT skill, attribution, verified FROM events WHERE session_id=?",
             (self.session_id,)).fetchall()
+        failed = sorted({s for s, _, v in all_rows if v == 0})
+        rows = [(s, a) for s, a, v in all_rows if v == 1]
+        unchecked = sorted({s for s, _, v in all_rows if v is None})
+        pretty = lambda xs: ", ".join(x.replace("_", " ") for x in xs)
         if not rows:
+            if failed:
+                return (f"That didn't work: {pretty(failed)} didn't come out in SolidWorks, "
+                        "so none of it counts yet. Let's try again.")
+            if unchecked:
+                return "Actions were attempted, but their results are unverified and do not count toward progress."
             return "We didn't build anything this session."
         demo = sorted({s for s, a in rows if a == Attribution.AYA_DEMONSTRATED.value})
         guided = sorted({s for s, a in rows if a == Attribution.STUDENT_GUIDED.value})
         unaided = sorted({s for s, a in rows if a == Attribution.STUDENT_UNAIDED.value})
         done_for = sorted({s for s, a in rows if a == Attribution.AYA_DID_FOR_STUDENT.value})
 
-        pretty = lambda xs: ", ".join(x.replace("_", " ") for x in xs)
         parts = []
+        if unchecked:
+            parts.append("some results remain unverified and do not count toward progress")
         if unaided:
             parts.append(f"You did {pretty(unaided)} on your own")
         if guided:
@@ -246,6 +259,8 @@ class Ledger:
             parts.append(f"I showed you {pretty(demo)} — try that yourself next time")
         if done_for:
             parts.append(f"I built {pretty(done_for)} for you, so that one's still yours to learn")
+        if failed:
+            parts.append(f"{pretty(failed)} didn't work, so it doesn't count yet")
         return "; ".join(parts).capitalize() + "."
 
     def export_markdown(self, path: Optional[Path] = None) -> Path:
@@ -254,6 +269,7 @@ class Ledger:
         statuses = self.skill_status()
         lines = [f"# Ayakha progress — {self.student_id}",
                  f"_Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}_", "",
+                 "Only verified results count toward progress; feature presence alone is unverified.", "",
                  "| Skill | Status | Unaided | Guided | Aya demonstrated | Done for student |",
                  "|---|---|---|---|---|---|"]
         for s in statuses:
@@ -262,6 +278,12 @@ class Ledger:
         n_sessions, n_takeover = self.db.execute(
             "SELECT COUNT(*), SUM(takeover) FROM sessions WHERE student_id=?",
             (self.student_id,)).fetchone()
-        lines += ["", f"Sessions: {n_sessions} · Full take-overs requested: {n_takeover or 0}"]
+        n_confirmed, n_unchecked, n_failed = self.db.execute(
+            "SELECT SUM(verified=1), SUM(verified IS NULL), SUM(verified=0) "
+            "FROM events WHERE student_id=?", (self.student_id,)).fetchone()
+        lines += ["", f"Sessions: {n_sessions} · Full take-overs requested: {n_takeover or 0}",
+                  f"Steps confirmed in the tool: {n_confirmed or 0} · "
+                  f"not checkable: {n_unchecked or 0} · "
+                  f"failed (excluded from the table above): {n_failed or 0}"]
         path.write_text("\n".join(lines), encoding="utf-8")
         return path

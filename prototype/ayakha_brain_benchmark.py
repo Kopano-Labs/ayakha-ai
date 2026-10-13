@@ -2,7 +2,7 @@
 Ayakha Brain Benchmark
 =======================
 
-Sends the same set of test requests to Groq (Llama 3.3 70B) and Gemini
+Sends the same set of test requests to Groq (openai/gpt-oss-120b) and Gemini
 (Flash-Lite) and checks which one reliably produces valid MacroAction JSON
 — i.e. which one is actually usable as Aya's brain, not just which one
 "sounds" capable.
@@ -85,8 +85,7 @@ TEST_CASES = [
 def call_groq(prompt: str) -> tuple[str, float]:
     """Returns (raw_response_text, latency_seconds).
 
-    Note: llama-3.3-70b-versatile was decommissioned by Groq on 2026-08-16.
-    Using their recommended replacement, openai/gpt-oss-120b, instead.
+    Uses openai/gpt-oss-120b as configured in this prototype.
     """
     api_key = os.environ["GROQ_API_KEY"]
     start = time.time()
@@ -188,7 +187,7 @@ def evaluate(provider_name: str, call_fn, prompt: str) -> dict:
 def main():
     providers = []
     if "GROQ_API_KEY" in os.environ:
-        providers.append(("Groq (Llama 3.3 70B)", call_groq))
+        providers.append(("Groq (openai/gpt-oss-120b)", call_groq))
     if "GEMINI_API_KEY" in os.environ:
         providers.append(("Gemini 2.5 Flash-Lite", call_gemini))
 
