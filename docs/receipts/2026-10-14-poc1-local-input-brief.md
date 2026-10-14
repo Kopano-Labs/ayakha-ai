@@ -13,6 +13,8 @@ student-field validation.
 - Implementation commit: `ebc9fe774edebf87b4083b5922a9a7a3c910bce4`
   (`feat: add local Aya POC-1 brief loop`).
 - Branch: `codex/poc1-local-aya-brief`.
+- Review: [PR #6](https://github.com/RobynAwesome/ayakha-ai/pull/6), open at
+  the time this receipt was updated.
 - Governing issue: [#1](https://github.com/RobynAwesome/ayakha-ai/issues/1).
 - Scope authority: [MVP truth lock](../MVP_TRUTH_LOCK.md).
 
