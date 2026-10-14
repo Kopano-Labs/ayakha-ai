@@ -6,3 +6,4 @@ backup_*/
 ui_dump.txt
 .pytest_cache/
 .venv/
+aya-workspace/

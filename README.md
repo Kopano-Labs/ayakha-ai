@@ -48,6 +48,24 @@ For Linux commands or a Windows/SolidWorks live session, follow the
 canonical implementation is [POC-1 issue #1](https://github.com/RobynAwesome/ayakha-ai/issues/1):
 local input, clarification and an editable brief, with no external-tool execution.
 
+## Run POC-1 locally
+
+POC-1 now provides a connector-free local development shell. It uses a
+deterministic, explainable planner until a separately scoped local-model adapter
+is ready. It makes no network, Canva, SolidWorks, browser or device calls.
+
+```powershell
+.\.venv\Scripts\python.exe -m aya_runtime status
+.\.venv\Scripts\python.exe -m aya_runtime brief --request "Aya, I need a motor mount for our Cars4Mars rover. It must fit the motor, survive vibration, stay within our printer volume and be easy for a student to explain."
+.\.venv\Scripts\python.exe -m aya_runtime interactive
+```
+
+The `brief` and `interactive` commands print the canonical intent JSON and write
+an editable local Markdown brief to `aya-workspace/design-brief.md` by default.
+The checked-in [Cars4Mars fixture](fixtures/cars4mars_motor_mount.json) makes the
+clarification case repeatable. Its missing requirements are intentional; Aya must
+ask instead of inventing motor specifications.
+
 ## Intended MVP outcome
 
 > A student can speak, type, sketch or show a design intention; Aya runs locally, clarifies what is missing, creates an explainable design brief, and helps the student make one approved change in Canva and one approved change in SolidWorks.
