@@ -2,9 +2,24 @@
 
 Before changing code, read:
 
-1. `NOW.md`
-2. `docs/MVP_TRUTH_LOCK.md`
-3. the active issue or pull-request acceptance criteria
+1. `AGENTS.md` (repository-wide instructions)
+2. `NOW.md`
+3. `docs/MVP_TRUTH_LOCK.md` and `docs/NEXT_STEPS.md`
+4. the active issue or pull-request acceptance criteria
+
+## Merged baseline
+
+As verified on 2026-10-14, the repository is `RobynAwesome/ayakha-ai`. PR #4 and
+PR #3 are merged; `main` at `8d15cd7` passed hosted Ubuntu and Windows CI with
+57 tests and compilation on each platform. Exact links are in `NOW.md`.
+The earlier billing lock and PR stack are historical. Re-query GitHub before
+making current-state claims and start new work from current `main`.
+
+The prototype uses connected Groq/Google flows and a different action contract.
+The merges do not satisfy the canonical local-inference MVP. POC-1 issue #1
+remains the next canonical implementation; live SolidWorks proof is a separate
+next step. Keep mandatory local approval, disposable-part ownership checks and
+disabled capabilities intact. Feature presence is not verified geometry.
 
 ## Product language
 

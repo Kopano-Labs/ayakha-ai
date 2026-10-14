@@ -4,7 +4,51 @@ Ayakha is a local-first, multimodal design-thinking desktop companion for studen
 
 Aya is the canonical everyday face of the product: the name, icon, voice and patient guide a learner meets. Ayakha is the broader system that helps a person move from an idea to a clear brief, an editable artifact and a testable next step.
 
-## MVP sentence
+## Current success and starting point
+
+As verified on **2026-10-14**, the canonical repository is
+[RobynAwesome/ayakha-ai](https://github.com/RobynAwesome/ayakha-ai), transferred
+from Kopano-Labs with its history intact. [PR #4](https://github.com/RobynAwesome/ayakha-ai/pull/4)
+and [PR #3](https://github.com/RobynAwesome/ayakha-ai/pull/3) are merged. The published
+implementation baseline is `main` at `8d15cd7`.
+
+**Hosted Ubuntu and Windows CI each passed 57 tests and compilation on that
+merged commit.** [View the successful main run](https://github.com/RobynAwesome/ayakha-ai/actions/runs/38486145600).
+The earlier billing blocker no longer prevents Actions execution in this repository.
+
+The merged `prototype/` contains a connected voice/text-to-SolidWorks experiment,
+local execution gates, a SQLite ledger and offline tests. It still uses Groq and
+optional Google speech recognition; Canva execution is disabled and real CAD
+geometry remains to be validated. The local-inference MVP below is the intended
+product contract, not a claim that these PRs completed it.
+
+| Read | Purpose |
+|---|---|
+| [NOW.md](NOW.md) | Current evidence, implementation inventory and remaining gaps |
+| [AGENTS.md](AGENTS.md) | Entry instructions for every coding agent |
+| [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md) | Live SolidWorks proof, scope decision and POC-1 acceptance |
+| [prototype/README.md](prototype/README.md) | Prototype setup, execution boundaries and recovery |
+| [docs/README.md](docs/README.md) | Scope authority and dated evidence index |
+
+## Start with offline checks
+
+From the repository root, use Python 3.12. This exercises fake COM drivers and
+temporary ledgers without SolidWorks, provider keys, a microphone or a browser.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r prototype/requirements-test.txt
+.\.venv\Scripts\python.exe -m pytest prototype/tests -q
+.\.venv\Scripts\python.exe -m compileall -q prototype
+```
+
+For Linux commands or a Windows/SolidWorks live session, follow the
+[prototype instructions](prototype/README.md). The next live proof is a measured
+100x50x10 mm disposable part followed by the M15 positioning regression. The next
+canonical implementation is [POC-1 issue #1](https://github.com/RobynAwesome/ayakha-ai/issues/1):
+local input, clarification and an editable brief, with no external-tool execution.
+
+## Intended MVP outcome
 
 > A student can speak, type, sketch or show a design intention; Aya runs locally, clarifies what is missing, creates an explainable design brief, and helps the student make one approved change in Canva and one approved change in SolidWorks.
 
@@ -59,7 +103,7 @@ These are valid Ayakha expansion paths. They are not allowed to dilute the first
 
 ## Canonical execution order
 
-1. Read `NOW.md` and `docs/MVP_TRUTH_LOCK.md`.
+1. Read `AGENTS.md`, `NOW.md`, `docs/MVP_TRUTH_LOCK.md` and the active issue.
 2. Build the local Aya input-to-brief loop.
 3. Add the Canva connector.
 4. Add the SolidWorks connector.
@@ -71,9 +115,16 @@ These are valid Ayakha expansion paths. They are not allowed to dilute the first
 Every agent or contributor—including GitHub Copilot, Claude, Codex and human contributors—must recover the current state before acting:
 
 - `NOW.md` is the volatile current-state receipt.
+- `AGENTS.md` applies repository-wide; `.github/copilot-instructions.md` points Copilot to the same guidance.
+- `docs/NEXT_STEPS.md` sets out the next proof and implementation acceptance; dated receipts in `docs/receipts/` preserve earlier states.
 - `docs/MVP_TRUTH_LOCK.md` is the scope and acceptance authority.
 - Pull requests must state the proof they add, the test run, and any remaining uncertainty.
 - New capability must be proposed in an issue before it becomes implementation scope.
+
+Develop locally, then push scoped commits for review. The local working folder is
+`C:\Users\rkhol\ayakha-ai`; `origin` is
+`https://github.com/RobynAwesome/ayakha-ai.git`. Start new work from current `main`
+on a `codex/` branch. PRs #3/#4 are merged history, not active development lanes.
 
 ## Brand note
 
