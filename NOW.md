@@ -43,7 +43,8 @@ open. Its local input-to-brief implementation is prepared for review on
 [PR #6](https://github.com/RobynAwesome/ayakha-ai/pull/6). It supplies the local development
 shell, canonical intent, clarification loop, editable Markdown brief and
 Cars4Mars fixture, with no external action. The [POC-1 receipt](docs/receipts/2026-10-14-poc1-local-input-brief.md)
-records its local evidence; it is neither merged nor a hosted-CI result yet.
+records its local evidence and its passing hosted CI at `ac443be`; it remains
+unmerged, and checks must be re-queried after any later commit.
 Canva proof, an approved edit in a prepared SolidWorks part, undo/version
 evidence, packaging and student-field evidence remain pending. The exploratory
 COM driver and ledger exist; that does not make their MVP acceptance complete.
@@ -52,7 +53,7 @@ COM driver and ledger exist; that does not make their MVP acceptance complete.
 
 Use [NEXT_STEPS.md](docs/NEXT_STEPS.md) for acceptance criteria and handoff details.
 
-1. Review [POC-1 PR #6](https://github.com/RobynAwesome/ayakha-ai/pull/6) and run the existing hosted Ubuntu/Windows workflow at its exact head. Its required captured intent and clarification response are already in the POC-1 receipt; merge evidence remains pending.
+1. Review [POC-1 PR #6](https://github.com/RobynAwesome/ayakha-ai/pull/6). Its Ubuntu/Windows checks passed at `ac443be`; re-query the exact head before a merge decision. The required captured intent and clarification response are in the POC-1 receipt; merge evidence remains pending.
 2. Validate the merged prototype on the actual Windows/SolidWorks machine: disposable 100x50 mm rectangle extruded 10 mm, then the M15 positioning regression, with measured geometry and ledger evidence. Preserve approval gates and record failures honestly.
 3. Robyn and H resolve the prototype/MVP scope differences before promotion: hosted versus local inference, MacroAction versus canonical intent, COM versus visible clicks, and free-form creation versus one prepared-part parameter edit. Until a documented decision changes scope, the active truth lock governs.
 

@@ -58,8 +58,9 @@ at `ebc9fe774edebf87b4083b5922a9a7a3c910bce4`, in
 [PR #6](https://github.com/RobynAwesome/ayakha-ai/pull/6). It adds the local development
 shell, deterministic canonical intent adapter, editable Markdown brief and
 Cars4Mars fixture. Its [dated receipt](receipts/2026-10-14-poc1-local-input-brief.md)
-records 61 local offline tests and a captured intent; hosted CI and merge remain
-pending and must be re-queried before they are claimed.
+records 61 local offline tests, a captured intent and passing Ubuntu/Windows CI
+at `ac443be`. The pull request remains open, and any later commit needs an
+exact-head CI re-query before it is claimed as passing.
 
 Acceptance requires:
 

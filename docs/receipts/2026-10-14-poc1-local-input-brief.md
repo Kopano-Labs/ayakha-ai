@@ -59,6 +59,16 @@ intent and wrote an editable brief. The offline suite passed **61 tests in
 3.49 seconds**; compilation and `git diff --check` passed. The manual output
 path is ignored and is not part of this receipt.
 
+## Hosted CI observation
+
+At PR head `ac443be816da6099619369d58d854e15743188b8`, the existing
+[Prototype offline tests run 38547690494](https://github.com/RobynAwesome/ayakha-ai/actions/runs/38547690494)
+passed. Ubuntu ran 61 tests in 0.55 seconds and Windows ran 61 tests in 2.85
+seconds; both completed `python -m compileall -q prototype aya_runtime`.
+GitGuardian also passed. This verifies that exact head only. The PR is still
+open, and any later commit requires a fresh exact-head check before it can be
+called passing.
+
 ## Remaining constraints and next proof
 
 The planner is deterministic code, not the locally hosted planner/model adapter
