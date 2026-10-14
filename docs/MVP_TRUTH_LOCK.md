@@ -1,8 +1,16 @@
 # Ayakha MVP Truth Lock
 
-Status: active  
-Date: 2026-08-26  
+Status: active
+Date: 2026-08-26
 Authority: product and engineering scope for the first proof
+
+Implementation note (2026-10-14): PRs #3 and #4 have merged an exploratory
+connected prototype, and its offline Ubuntu/Windows CI passed. This contract
+remains active; the merges do not ratify hosted inference, replace canonical
+intent/clarification or complete the acceptance test below. See
+[NOW.md](../NOW.md) for current evidence and [NEXT_STEPS.md](NEXT_STEPS.md) for
+the prototype proof and POC-1 implementation lanes. The original contract date
+above remains the date of the scope authority.
 
 ## 1. Problem
 

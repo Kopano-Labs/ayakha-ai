@@ -1,8 +1,16 @@
 # Aya prototype: voice to SolidWorks pipeline
 
 Exploratory prototype built by H with Claude between September and October 2026.
-It runs on H's Windows machine. It is **not** the MVP described in
-`docs/MVP_TRUTH_LOCK.md`; see the receipt in `docs/receipts/` for how it differs.
+It was developed on H's Windows machine and is now merged into `main` through
+[PR #4](https://github.com/RobynAwesome/ayakha-ai/pull/4) and
+[PR #3](https://github.com/RobynAwesome/ayakha-ai/pull/3). At merged commit
+`8d15cd7`, hosted Ubuntu and Windows CI each passed **57 tests** and compilation:
+[main run](https://github.com/RobynAwesome/ayakha-ai/actions/runs/38486145600).
+The current safety baseline still needs a live SolidWorks run.
+
+It is **not** the MVP described in [the truth lock](../docs/MVP_TRUTH_LOCK.md).
+Read [NOW.md](../NOW.md) and [next steps](../docs/NEXT_STEPS.md) for current scope
+and the next machine proof. Earlier reported runs remain in the dated receipts.
 
 ## What it does
 
@@ -44,11 +52,14 @@ truth lock's planned local inference runtime.
 | File | Purpose |
 |---|---|
 | `macro_action_schema.py` | Pydantic contract between the brain and the local driver |
-| `ayakha_local_driver.py` | Entry point: voice loop, Groq call, approval gate, SolidWorks/Canva dispatch |
+| `ayakha_local_driver.py` | Entry point: consent, voice/text loop, Groq call, approval gate and SolidWorks dispatch |
+| `execution_policy.py` | Local action allowlist and full-plan parameter validation |
 | `ayakha_ledger.py` | SQLite learning ledger + lecturer-readable markdown report |
 | `ayakha_canva_driver.py` | Playwright browser automation for Canva (untested) |
 | `ayakha_brain_benchmark.py` | Groq vs Gemini benchmark on MacroAction validity |
 | `inspect_solidworks_ui.py` | Read-only dump of SolidWorks' UI Automation tree |
+| `tests/` | Offline execution-safety, verification and ledger regressions |
+| `requirements-test.txt` | Pinned offline test dependencies used by CI |
 
 ## Run (Windows, SolidWorks installed)
 
@@ -64,10 +75,25 @@ Never commit API keys. Keep them in environment variables.
 
 ## Tests (no SolidWorks needed)
 
+Run from the repository root with Python 3.12; create `.venv` first if needed.
+
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r prototype/requirements-test.txt
 .\.venv\Scripts\python.exe -m pytest prototype/tests -q
+.\.venv\Scripts\python.exe -m compileall -q prototype
 ```
+
+Linux equivalents:
+
+```bash
+python3.12 -m venv .venv
+.venv/bin/python -m pip install -r prototype/requirements-test.txt
+.venv/bin/python -m pytest prototype/tests -q
+.venv/bin/python -m compileall -q prototype
+```
+
+These commands validate the cross-platform Python logic. SolidWorks COM itself
+requires Windows; passing Ubuntu CI does not establish a Linux CAD adapter.
 
 They use fake drivers to check confirmation, policy, document ownership,
 interruption, verification and ledger logic. CI runs them on Windows and Linux
@@ -77,10 +103,14 @@ requires a live SolidWorks run.
 ## Local development to GitHub
 
 The working folder is `C:\Users\rkhol\ayakha-ai`. `origin` is
-`https://github.com/Kopano-Labs/ayakha-ai.git`; local `fix/ledger-verification`
-tracks the existing PR #4 branch. Check status, fetch, inspect incoming changes,
-edit and test locally, commit the intended files, then push this branch.
-PR #4 targets `prototype/voice-solidworks-pipeline` (PR #3), which targets `main`.
-Preserve that stack. Rebase only when divergence warrants it; do not force-push
-to refresh a date. Review #4, integrate it into #3, then revalidate #3's exact head
-before any authorized merge to `main`.
+`https://github.com/RobynAwesome/ayakha-ai.git`. PR #4 was merged into the prototype
+branch, then PR #3 into `main`; the former stack is history.
+
+Check status, fetch and compare incoming changes while preserving unrelated work.
+Start new work from current `main` on a scoped `codex/` branch; edit and test
+locally, commit the intended files, then push for review. Rebase only when
+divergence warrants it; do not force-push to refresh a date.
+
+The next live session must measure the rectangle/extrude and M15 positioning
+cases, exercise ownership/recovery and inspect the ledger. Follow
+[NEXT_STEPS.md](../docs/NEXT_STEPS.md) for the receipt and acceptance boundaries.

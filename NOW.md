@@ -1,101 +1,58 @@
 # Ayakha Current State
 
-Updated: 2026-10-12
-Repository: `Kopano-Labs/ayakha-ai`
-Working branch: `fix/ledger-verification` (PR #4, stacked on PR #3)
-State: POC-0 truth lock seeded; POC-1 is open for implementation. A separate exploratory prototype exists (see below).
+- Updated: 2026-10-14 (Africa/Johannesburg).
+- Repository: [RobynAwesome/ayakha-ai](https://github.com/RobynAwesome/ayakha-ai).
+- Published implementation baseline: `main` at `8d15cd70ac0a6aec472a3db0bf5b13e90dae6601`.
+- State: exploratory prototype and safety fixes merged; hosted Ubuntu/Windows CI passed. POC-1 remains open.
 
-## Exploratory prototype (added 2026-10-11)
+## Verified success
 
-Local development now uses `C:\Users\rkhol\ayakha-ai`, tracking the Kopano-Labs
-GitHub repository. At the 2026-10-12 audit, `main` was `a20e6d5`, PR #3 was
-`b9d8b5a`, and PR #4 was `ddd2b75`: both PRs were zero commits behind their
-respective bases, so no rebase was needed. The safety patch is developed and
-tested locally before pushing to the existing PR #4 branch. Receipt:
-`docs/receipts/2026-10-12-local-safety-review.md`.
+The repository was transferred from Kopano-Labs to RobynAwesome, retaining GitHub repository ID `1347630895`, history and PRs. Robyn reported that the billing issue belonged to Kopano-Labs; successful Actions runs verify execution in the current repository, not the billing status of the former organization.
 
-Safety source commit `5218b949d5717fe4a9d561c3f9c51c52e160b73b` was pushed to
-PR #4 with 57 offline tests passing. GitHub created push/PR CI runs but did not
-start the jobs: annotations report an account lock due to a billing issue.
-Cloud CI remains blocked until the account owner resolves billing and reruns it.
+| Event | Exact evidence |
+|---|---|
+| PR #4 merged into the prototype branch | [PR #4](https://github.com/RobynAwesome/ayakha-ai/pull/4), merge `da9e0a0affced54501db06f593c4f397e5b86c76`, 2026-10-14 01:43:49 SAST |
+| PR #3 merged into main | [PR #3](https://github.com/RobynAwesome/ayakha-ai/pull/3), merge `8d15cd70ac0a6aec472a3db0bf5b13e90dae6601`, 2026-10-14 01:45:17 SAST |
+| Hosted CI on merged main | [Run 38486145600](https://github.com/RobynAwesome/ayakha-ai/actions/runs/38486145600), same `8d15cd7` commit, Python 3.12 |
+| Ubuntu and Windows jobs | Each ran **57 passing tests** and successful `compileall`; no SolidWorks or provider keys required |
 
-The patch enforces local approval, bounds execution to reviewed SolidWorks
-primitives in an owned unsaved part, disables unreviewed dispatch and saving,
-and adds offline Windows/Linux CI. Feature presence remains unverified geometry
-and cannot count toward learning progress. Live COM/geometry proof and the
-truth-lock scope decision remain pending. PR #3's requested-changes review must
-be re-evaluated after integration; neither PR is automatically approved.
+The former PR stack is merged history. Do not resume PR #4 or treat the old billing blocker as current. The full observation is in the [transfer, merge and CI receipt](docs/receipts/2026-10-14-transfer-merge-ci-success.md). Re-query main, PRs and CI before making new current-state claims.
 
-H built a voice to SolidWorks prototype on his machine (Sept–Oct 2026), now in
-`prototype/` on branch `prototype/voice-solidworks-pipeline`. It uses a cloud brain
-(Groq), which conflicts with the truth lock's local-inference rule. The truth lock
-has **not** been changed; Robyn and H need to decide. Full evidence, defects and
-next actions: `docs/receipts/2026-10-11-voice-solidworks-prototype.md`.
+## What exists in source
 
-## Canonical product state
+| Area | Current implementation and limits |
+|---|---|
+| Exploratory input/planner | Typed input, optional Google speech recognition and Groq `openai/gpt-oss-120b`; hosted flows require startup consent |
+| Action contract | Prototype MacroAction, mandatory local approval and whole-plan preflight; not the canonical MVP intent contract |
+| SolidWorks driver | Windows COM sketch/extrude primitives, bounded parameters, checks for Aya's unsaved disposable part; actual machine behavior remains to be validated |
+| Execution gates | Exact y/yes, document ownership checks, failed/interrupted driver invalidation; no pause/resume or automated rollback |
+| Disabled actions | Generic desktop control, toolbar clicks, automatic saving, Canva dispatch, feature selection, dimension and fillet execution |
+| Ledger | Local SQLite attempts/attribution and Markdown reports; failed or unknown results do not establish learning progress; historical flags were not re-audited |
+| Verification | Before/after feature trees can detect missing features. Presence alone remains geometry-unverified |
+| Tests and CI | 57 offline tests with fake COM drivers/documents; hosted Windows/Linux checks passed at the baseline above |
+| Preserved exploratory files | Untested Canva driver, schema benchmark and read-only SolidWorks UI inspection script |
 
-- Product: Ayakha
-- Everyday face/persona: Aya
-- Core: local-first multimodal design-thinking desktop companion
-- MVP proof tools: Canva + SolidWorks
-- Development lane: Windows-first for the SolidWorks adapter; cross-platform core and packaging
+## Canonical MVP status
 
-## What is proven
+Aya is the everyday persona; Ayakha is the broader local-first desktop product. [MVP_TRUTH_LOCK.md](docs/MVP_TRUTH_LOCK.md) remains active. Merging the prototype does not change the local-inference requirement, intent/clarification contract or the one-approved-parameter-edit acceptance case.
 
-- The pitch has been redesigned around Aya as the canonical simple identity and Ayakha as the broader platform.
-- The repository was empty before this truth-lock seed.
-- MVP scope and acceptance criteria are now recorded in `docs/MVP_TRUTH_LOCK.md`.
-- Agent continuity rules are recorded in `.github/copilot-instructions.md`.
-- GitHub issue #1 records the POC-1 acceptance criteria: https://github.com/RobynAwesome/ayakha-ai/issues/1
+POC-1 [issue #1](https://github.com/RobynAwesome/ayakha-ai/issues/1) is still open: the canonical local shell, local planner/intent contract, clarification loop, editable brief and Cars4Mars fixture have not been delivered by these PRs. Canva proof, an approved edit in a prepared SolidWorks part, undo/version evidence, packaging and student-field evidence also remain pending. The exploratory COM driver and ledger exist; that does not make their MVP acceptance complete.
 
-## Current implementation status
+## Next work
 
-Not started:
+Use [NEXT_STEPS.md](docs/NEXT_STEPS.md) for acceptance criteria and handoff details.
 
-- desktop shell;
-- local STT/planner/vision/TTS loop;
-- intent JSON contract implementation;
-- Canva connector;
-- SolidWorks connector;
-- local ledger;
-- packaging and demo evidence.
+1. Validate the merged prototype on the actual Windows/SolidWorks machine: disposable 100x50 mm rectangle extruded 10 mm, then the M15 positioning regression, with measured geometry and ledger evidence. Preserve approval gates and record failures honestly.
+2. Robyn and H resolve the prototype/MVP scope differences before promotion: hosted versus local inference, MacroAction versus canonical intent, COM versus visible clicks, and free-form creation versus one prepared-part parameter edit. Until a documented decision changes scope, the active truth lock governs.
+3. The next canonical implementation task remains POC-1 issue #1. It must clarify missing motor dimensions, bolt pattern, load, material and printer limits, render an editable brief, and execute no external-tool actions.
 
-## Next action
+These are separate evidence and implementation lanes. Successful CI is not live CAD, local-inference, student-learning, deployment or completed-MVP proof.
 
-Implement POC-1: the local Aya input-to-design-brief loop (issue #1).
+## Local development and agent entry
 
-POC-1 must provide:
+- Working folder: `C:\Users\rkhol\ayakha-ai`.
+- Canonical remote: `https://github.com/RobynAwesome/ayakha-ai.git`.
 
-1. a launchable desktop shell or local development shell;
-2. text input fallback;
-3. a local planner adapter returning the canonical intent JSON;
-4. clarification questions for missing requirements;
-5. a rendered design brief;
-6. a test fixture for the Cars4Mars motor-mount request.
+Start with [AGENTS.md](AGENTS.md), this file, the truth lock and the active issue. Inspect dirty state, fetch and compare; preserve unrelated changes. Start each new task from current main on a scoped `codex/` branch, edit and validate locally, then push the intended commits for review. Do not reuse the merged PR branches or force-push to refresh dates.
 
-Voice, visual input and TTS remain interfaces in POC-1 if the local hardware/model environment is not ready; the acceptance contract must not be weakened.
-
-## Required receipt for the next change
-
-Record:
-
-- files changed;
-- install/run commands;
-- test command and result;
-- one captured intent JSON;
-- one captured clarification response;
-- remaining model or hardware constraints;
-- next proof action.
-
-## Do not do yet
-
-Do not begin with:
-
-- a marketing website;
-- a web-only application;
-- full printer control;
-- Blender or game-asset generation;
-- cloud collaboration;
-- autonomous external actions.
-
-The next proof is local understanding, not feature breadth.
+Every implementation receipt must include changed files, setup/run commands, test results, observed proof, unresolved uncertainty and the next proof action. POC-1 additionally needs a captured intent JSON and clarification response. Keep historical receipts intact; use a new dated receipt for new observations.
