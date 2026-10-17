@@ -53,6 +53,15 @@ The merges themselves do not make that decision.
 the next canonical engineering task. Keep it separate from the live prototype
 session; it can proceed under the unchanged truth lock.
 
+Implementation is prepared for review on `codex/poc1-local-aya-brief`, beginning
+at `ebc9fe774edebf87b4083b5922a9a7a3c910bce4`, in
+[PR #6](https://github.com/RobynAwesome/ayakha-ai/pull/6). It adds the local development
+shell, deterministic canonical intent adapter, editable Markdown brief and
+Cars4Mars fixture. Its [dated receipt](receipts/2026-10-14-poc1-local-input-brief.md)
+records 61 local offline tests, a captured intent and passing Ubuntu/Windows CI
+at `ac443be`. The pull request remains open, and any later commit needs an
+exact-head CI re-query before it is claimed as passing.
+
 Acceptance requires:
 
 1. A desktop or local development shell with visible Aya runtime status.

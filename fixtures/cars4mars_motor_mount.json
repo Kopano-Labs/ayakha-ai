@@ -1,0 +1,11 @@
+{
+  "name": "cars4mars_motor_mount_missing_constraints",
+  "request": "Aya, I need a motor mount for our Cars4Mars rover. It must fit the motor, survive vibration, stay within our printer volume and be easy for a student to explain.",
+  "expected_missing_requirements": [
+    "motor dimensions",
+    "mounting interface and bolt pattern",
+    "material",
+    "load and safety requirements",
+    "printer build limits"
+  ]
+}

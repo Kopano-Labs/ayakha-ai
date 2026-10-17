@@ -36,15 +36,26 @@ The former PR stack is merged history. Do not resume PR #4 or treat the old bill
 
 Aya is the everyday persona; Ayakha is the broader local-first desktop product. [MVP_TRUTH_LOCK.md](docs/MVP_TRUTH_LOCK.md) remains active. Merging the prototype does not change the local-inference requirement, intent/clarification contract or the one-approved-parameter-edit acceptance case.
 
-POC-1 [issue #1](https://github.com/RobynAwesome/ayakha-ai/issues/1) is still open: the canonical local shell, local planner/intent contract, clarification loop, editable brief and Cars4Mars fixture have not been delivered by these PRs. Canva proof, an approved edit in a prepared SolidWorks part, undo/version evidence, packaging and student-field evidence also remain pending. The exploratory COM driver and ledger exist; that does not make their MVP acceptance complete.
+POC-1 [issue #1](https://github.com/RobynAwesome/ayakha-ai/issues/1) remains
+open. Its local input-to-brief implementation is prepared for review on
+`codex/poc1-local-aya-brief`, beginning at
+`ebc9fe774edebf87b4083b5922a9a7a3c910bce4`, and is under review in
+[PR #6](https://github.com/RobynAwesome/ayakha-ai/pull/6). It supplies the local development
+shell, canonical intent, clarification loop, editable Markdown brief and
+Cars4Mars fixture, with no external action. The [POC-1 receipt](docs/receipts/2026-10-14-poc1-local-input-brief.md)
+records its local evidence and its passing hosted CI at `ac443be`; it remains
+unmerged, and checks must be re-queried after any later commit.
+Canva proof, an approved edit in a prepared SolidWorks part, undo/version
+evidence, packaging and student-field evidence remain pending. The exploratory
+COM driver and ledger exist; that does not make their MVP acceptance complete.
 
 ## Next work
 
 Use [NEXT_STEPS.md](docs/NEXT_STEPS.md) for acceptance criteria and handoff details.
 
-1. Validate the merged prototype on the actual Windows/SolidWorks machine: disposable 100x50 mm rectangle extruded 10 mm, then the M15 positioning regression, with measured geometry and ledger evidence. Preserve approval gates and record failures honestly.
-2. Robyn and H resolve the prototype/MVP scope differences before promotion: hosted versus local inference, MacroAction versus canonical intent, COM versus visible clicks, and free-form creation versus one prepared-part parameter edit. Until a documented decision changes scope, the active truth lock governs.
-3. The next canonical implementation task remains POC-1 issue #1. It must clarify missing motor dimensions, bolt pattern, load, material and printer limits, render an editable brief, and execute no external-tool actions.
+1. Review [POC-1 PR #6](https://github.com/RobynAwesome/ayakha-ai/pull/6). Its Ubuntu/Windows checks passed at `ac443be`; re-query the exact head before a merge decision. The required captured intent and clarification response are in the POC-1 receipt; merge evidence remains pending.
+2. Validate the merged prototype on the actual Windows/SolidWorks machine: disposable 100x50 mm rectangle extruded 10 mm, then the M15 positioning regression, with measured geometry and ledger evidence. Preserve approval gates and record failures honestly.
+3. Robyn and H resolve the prototype/MVP scope differences before promotion: hosted versus local inference, MacroAction versus canonical intent, COM versus visible clicks, and free-form creation versus one prepared-part parameter edit. Until a documented decision changes scope, the active truth lock governs.
 
 These are separate evidence and implementation lanes. Successful CI is not live CAD, local-inference, student-learning, deployment or completed-MVP proof.
 

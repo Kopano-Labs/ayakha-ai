@@ -1,0 +1,36 @@
+{
+  "mode": "clarify",
+  "problem": "Create a motor mount that fits the rover motor and can be explained by a student.",
+  "user_or_context": "Cars4Mars student rover project",
+  "desired_outcome": "An explainable, printable motor-mount design brief",
+  "constraints": [
+    "fit the motor",
+    "survive vibration",
+    "printer volume",
+    "easy for a student to explain"
+  ],
+  "known_requirements": [
+    "fit the motor",
+    "survive vibration",
+    "easy for a student to explain"
+  ],
+  "missing_requirements": [
+    "motor dimensions",
+    "mounting interface and bolt pattern",
+    "material",
+    "load and safety requirements",
+    "printer build limits"
+  ],
+  "assumptions": [],
+  "questions": [
+    "What are the motor body, shaft, and mounting-face dimensions in millimetres?",
+    "What bolt pattern, hole size, and mounting interface must the motor mount use?",
+    "Which material and print orientation are available for this part?",
+    "What vibration or load profile and safety factor must the mount withstand?",
+    "What are the printer build dimensions, nozzle limits, and minimum wall thickness?"
+  ],
+  "proposed_action": null,
+  "target_tool": null,
+  "confidence": 0.3,
+  "requires_confirmation": true
+}
